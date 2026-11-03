@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { assignBranch } from '../src/router.ts';
 import { distanceKm } from '../src/geo.ts';
+import { almatyDate } from '../src/time.ts';
 import type { Branch, Order } from '../src/types.ts';
 
 const branch = (over: Partial<Branch>): Branch => ({
@@ -83,4 +84,25 @@ test('geo: если в городе несколько филиалов, выб�
   const res = assignBranch(order({ lat: 43.3, lon: 77.0 }), [almaty, ala2, konaev]);
   assert.deepEqual(res, { orderId: 'o-1', branchId: 'b-ala', rule: 'geo' });
 });
-test.todo('лимит: заполненный филиал пропускается');
+test('лимит: заполненный филиал пропускается', () => {
+  const ala2 = branch({ id: 'b-ala-2', city: 'Алматы', lat: 43.2, lon: 76.85, dailyLimit: 5 });
+  const full = { ...almaty, dailyLimit: 2 };
+  const counts: Record<string, number> = { 'b-ala': 2, 'b-ala-2': 1 };
+  const res = assignBranch(order({}), [full, ala2, astana], (id) => counts[id] ?? 0);
+  assert.deepEqual(res, { orderId: 'o-1', branchId: 'b-ala-2', rule: 'geo' });
+});
+
+test('лимит: если заполнены все филиалы — unassigned', () => {
+  const res = assignBranch(order({}), [almaty, astana], () => 1000);
+  assert.deepEqual(res, { orderId: 'o-1', branchId: null, rule: 'unassigned' });
+});
+
+test('лимит: manual не проверяет лимит', () => {
+  const res = assignBranch(order({ manualBranchId: 'b-ast' }), [almaty, astana], () => 1000);
+  assert.deepEqual(res, { orderId: 'o-1', branchId: 'b-ast', rule: 'manual' });
+});
+
+test('almatyDate: сутки считаются по Алматы', () => {
+  assert.equal(almatyDate('2026-11-15T18:59:00Z'), '2026-11-15');
+  assert.equal(almatyDate('2026-11-15T19:00:00Z'), '2026-11-16');
+});
