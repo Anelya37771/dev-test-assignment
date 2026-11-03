@@ -26,3 +26,8 @@ export type Range = { start: number; end: number };
 export function overlaps(a: Range, b: Range): boolean {
   return a.start < b.end && b.start < a.end;
 }
+
+// Местное время Алматы на дату -> момент времени в мс (UTC)
+export function localToUtcMs(date: string, hhmm: string): number {
+  return Date.parse(`${date}T${hhmm}:00${TZ_OFFSET}`);
+}
