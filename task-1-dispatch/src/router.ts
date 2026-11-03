@@ -15,7 +15,21 @@ export function assignBranch(order: Order, branches: Branch[]): Assignment {
 
   // TODO: pickup_point, city
 
-  const nearest = findNearest(order, own);
+    const pickupPointId = order.pickupPointId;
+  if (pickupPointId) {
+    const byPickup = own.find((b) => b.pickupPointIds.includes(pickupPointId));
+    if (byPickup) return { orderId: order.id, branchId: byPickup.id, rule: 'pickup_point' };
+  }
+
+  const inCity = own.filter((b) => b.city === order.city);
+  if (inCity.length === 1) {
+    return { orderId: order.id, branchId: inCity[0].id, rule: 'city' };
+  }
+
+  // Если в городе заказа несколько филиалов — ищем среди них, иначе среди всех
+  const candidates = inCity.length > 1 ? inCity : own;
+  const nearest = findNearest(order, candidates);
+  
   if (nearest) return { orderId: order.id, branchId: nearest.id, rule: 'geo' };
 
   return { orderId: order.id, branchId: null, rule: 'unassigned' };
